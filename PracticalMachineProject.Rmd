@@ -1,0 +1,159 @@
+---
+title: "Practical Machine Learning Models Course Project"
+author: "Janice Hunnings"
+date: "September 4, 2017"
+output: html_document
+---
+
+##Executive Summary 
+Following is a data analysis of weight lifting data collected from devices such
+as Jawbone Up, Nike FuelBand, and Fitbit.  Usually, health enthusiasts who use
+these devices are focused on how much of a particular activity they complete.
+The focus of this study is to collect data from six individuals and determine how
+well they complete barbell lifts.
+
+##Defining the Question
+The question to be answered is "Given the data collected from an individual's 
+motion, the body and dumbbell sensors, 
+can it be determined that the exercise (bicep curl) was completed correctly?
+
+
+##Citing Data Sources
+The training data for this project are available here:
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+
+The test data are available here:
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+
+The data for this project come from this source: 
+
+Velloso, E.; Bulling, A.; Gellersen, H.; Ugulino, W.; Fuks, H. Qualitative Activity Recognition of Weight Lifting Exercises. Proceedings of 4th International Conference in Cooperation with SIGCHI (Augmented Human '13) . Stuttgart, Germany: ACM SIGCHI, 2013.
+
+Read more: http://groupware.les.inf.puc-rio.br/har#ixzz4NXZFx1ZT
+
+
+```{r, results="hide", warning=FALSE, include=FALSE}
+library(lubridate)
+library(ggplot2)
+library(caret)
+library(randomForest)
+library(rpart)
+library(rattle)
+library(ISLR)
+```
+
+##Input Data / Exploratory Analysis
+
+Based on the cited source above and visual examination, it is shown that there are:
+
+- 6 young participants
+- 4 sensors - lumbar belt, armband, glove/forearm, and dumbbell
+- The'classe' variable in the training data set is used for 5 types of movement
+labeled A-E.
+  -- A is the exact, correct movement
+  -- B is throwing the elbows to the front
+  -- C is lifting the dumbbell only halfway
+  -- D is lowering the dumbbell only halfway
+  -- E is throwing the hips to the front.
+A is the only correct movement while B-E are common incorrect motions.
+
+
+##Loading and Cleansing the Data
+
+```{r, echo=TRUE, }
+#Begin by removing the NA values and the values close to zero since the will
+#not assist in the creation of the model.
+training <- read.csv("pml-training.csv", na.strings=c("NA","#DIV/0!",""))
+testing <- read.csv("pml-testing.csv", na.strings=c("NA","#DIV/0!",""))
+
+#Review the sizes of the datasets
+dim(training)
+dim(testing)
+
+#Since each given dataset has many variables (160),we will investigate ways to reduce the variables until only the necessary ones are included.
+
+```
+##Features
+```{r, echo=TRUE, }
+#Let's extract only the variable columns that we need.  
+
+#According to the cited source above, in section 5.1, the researchers identified 17 #variables using an algorithm proposed by Hall.  The algorithm was configured
+#to use a 'Best First' strategy based on backtracking. 
+#
+#Of the 60 variables, I decided on 14 by choosing variables that correspond to 
+#the roll, pitch and yaw for each sensor.  Definitions of these can be found at:
+#http://howthingsfly.si.edu/flight-dynamics/roll-pitch-and-yaw.  These variables
+#will cover the movement for the 3 dimensions of space.
+#I will also remove any columns with time since that is irrelevant to our model
+
+training_clean <- training[,c('user_name','roll_belt','pitch_belt','yaw_belt','roll_arm','pitch_arm','yaw_arm','roll_dumbbell', 'pitch_dumbbell','yaw_dumbbell','roll_forearm','pitch_forearm','yaw_forearm','classe')]
+                           
+                          
+str(training_clean)
+head(training_clean)
+
+
+```
+
+##Algorithm
+```{r, echo=TRUE, }
+#Since training is such a large dataset and testing is only 20 rows, I decided to
+#create a second testing dataset (or a validation dataset) from this large 
+#training dataset.  Also, 
+#the original testing dataset needs to be left intact for the final confirmation of
+#the model
+
+#Begin by taking 70% for the training data and 30% for the test/validation data
+set.seed(32343)
+inTrain <- createDataPartition(training_clean$classe, p=0.7, list=FALSE)
+train1 <-training_clean[inTrain,]
+testval <- training_clean[-inTrain,]
+
+dim(train1)
+dim(testval)
+#These numbers are not sufficiently large enough to create an accurate model
+#which can be validated.
+
+#Using a Random Forest model generator, modfit is created from the training dataset
+modfit <- train(classe ~ .,data=train1, method = "rf")
+
+
+
+```
+
+##Evaluation
+```{r, echo=TRUE, }
+#Let us review the accuracy.  It is shown from both the plot and the results
+#of modfit that the final value for the model was mtry=9.  This resulted in
+#the highest accuracy of 0.982
+plot(modfit)
+modfit
+
+```
+
+##Evaluation
+```{r, echo=TRUE, }
+
+#The first attempt to test the model is with our testval dataset which is 30%
+#of the original training data.
+
+#A Cross Validation is done by performing a prediction and confusionMatrix 
+#from the test/validation data, t to do the Out of Sample error and 
+#Cross Validation
+predictions <- predict(modfit, newdata=testval)
+confusionMatrix(predictions, testval$classe)
+
+#Given that the accuracy is .9884, our Out of Sample error is 1-accuracy or:
+1-.9884
+
+#Any time that the accuracy is that high, we can proceed our next attempt
+#with confidence
+#that the model is likely to be a good fit.
+#Now I apply the predict function to the 20 observations in the give test
+#dataset and receive a vector with values from A-E.
+#These values are entered into the Week 4 quiz with 100% grade.
+predictions_test <- predict(modfit, newdata=testing)
+predictions_test
+
+```
+
