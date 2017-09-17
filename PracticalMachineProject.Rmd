@@ -61,7 +61,7 @@ A is the only correct movement while B-E are common incorrect motions.
 ##Loading and Cleansing the Data
 
 ```{r, echo=TRUE, }
-#Begin by removing the NA values and the values close to zero since the will
+#Begin by removing the NA values and the values close to zero since they will
 #not assist in the creation of the model.
 training <- read.csv("pml-training.csv", na.strings=c("NA","#DIV/0!",""))
 testing <- read.csv("pml-testing.csv", na.strings=c("NA","#DIV/0!",""))
@@ -70,7 +70,7 @@ testing <- read.csv("pml-testing.csv", na.strings=c("NA","#DIV/0!",""))
 dim(training)
 dim(testing)
 
-#Since each given dataset has many variables (160),we will investigate ways to reduce the variables until only the necessary ones are included.
+#Since each given dataset has many variables (160),we will investigate ways to reduce #the variables until only the necessary ones are included.
 
 ```
 ##Features
@@ -84,7 +84,7 @@ dim(testing)
 #the roll, pitch and yaw for each sensor.  Definitions of these can be found at:
 #http://howthingsfly.si.edu/flight-dynamics/roll-pitch-and-yaw.  These variables
 #will cover the movement for the 3 dimensions of space.
-#I will also remove any columns with time since that is irrelevant to our model
+#I will also remove any columns with time since that is irrelevant to our model.
 
 training_clean <- training[,c('user_name','roll_belt','pitch_belt','yaw_belt','roll_arm','pitch_arm','yaw_arm','roll_dumbbell', 'pitch_dumbbell','yaw_dumbbell','roll_forearm','pitch_forearm','yaw_forearm','classe')]
                            
@@ -97,13 +97,14 @@ head(training_clean)
 
 ##Algorithm
 ```{r, echo=TRUE, }
-#Since training is such a large dataset and testing is only 20 rows, I decided to
-#create a second testing dataset (or a validation dataset) from this large 
-#training dataset.  Also, 
-#the original testing dataset needs to be left intact for the final confirmation of
-#the model
+#Since training is such a large dataset and testing is only 20 rows, the training
+#dataset is not sufficiently large enough to create an accurate model which
+#can be validated.  I decided to create a second testind dataset (or a validation
+#dataset) from this large training dataset. 
+#Also, the original testing dataset needs to be left intact for the final # 
+#confirmation of the model.
 
-#Begin by taking 70% for the training data and 30% for the test/validation data
+#Begin by taking 70% for the training data and 30% for the test/validation data.
 set.seed(32343)
 inTrain <- createDataPartition(training_clean$classe, p=0.7, list=FALSE)
 train1 <-training_clean[inTrain,]
@@ -111,10 +112,9 @@ testval <- training_clean[-inTrain,]
 
 dim(train1)
 dim(testval)
-#These numbers are not sufficiently large enough to create an accurate model
-#which can be validated.
 
-#Using a Random Forest model generator, modfit is created from the training dataset
+
+#Using a Random Forest model generator, modfit is created from the training dataset.
 modfit <- train(classe ~ .,data=train1, method = "rf")
 
 
@@ -125,14 +125,11 @@ modfit <- train(classe ~ .,data=train1, method = "rf")
 ```{r, echo=TRUE, }
 #Let us review the accuracy.  It is shown from both the plot and the results
 #of modfit that the final value for the model was mtry=9.  This resulted in
-#the highest accuracy of 0.982
+#the highest accuracy of 0.982.
 plot(modfit)
 modfit
 
-```
 
-##Evaluation
-```{r, echo=TRUE, }
 
 #The first attempt to test the model is with our testval dataset which is 30%
 #of the original training data.
@@ -143,15 +140,14 @@ modfit
 predictions <- predict(modfit, newdata=testval)
 confusionMatrix(predictions, testval$classe)
 
-#Given that the accuracy is .9884, our Out of Sample error is 1-accuracy or:
-1-.9884
+#Given that the accuracy is .9888, our Out of Sample error is 1-accuracy or:
+1-.9888
 
 #Any time that the accuracy is that high, we can proceed our next attempt
-#with confidence
-#that the model is likely to be a good fit.
-#Now I apply the predict function to the 20 observations in the give test
-#dataset and receive a vector with values from A-E.
-#These values are entered into the Week 4 quiz with 100% grade.
+#with confidence that the model is likely to be a good fit.  Now I apply the
+#predict function to the 20 observations in the give test dataset and receive
+#a vector with values from A-E. These values are entered into the Week 4 quiz
+#with 100% grade.
 predictions_test <- predict(modfit, newdata=testing)
 predictions_test
 
